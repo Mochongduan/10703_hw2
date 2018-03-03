@@ -38,7 +38,7 @@ class QNetwork():
 class Replay_Memory():
 
 	def __init__(self, memory_size=50000, burn_in=10000):
-         self.memory = deque(maxlen = memory_size)
+         	 self.memory = deque(maxlen = memory_size)
 		 self.epsilon_min = 0.01
 		 self.epsilon_decay = 0.99
 		 self.epsilon = 1
@@ -55,7 +55,7 @@ class Replay_Memory():
 
 
 	def sample_batch(self, batch_size=32):
-	    minibatch = random.sample(self.memory, batch_size)
+	    	minibatch = random.sample(self.memory, batch_size)
 		return minibatch
 
 	def append(self, transition):
