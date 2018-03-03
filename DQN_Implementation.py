@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 import keras, tensorflow as tf, numpy as npy, gym, sys, copy, argparse
+from collections import deque
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
 
 class QNetwork():
 
@@ -7,43 +11,59 @@ class QNetwork():
 	# The network should take in state of the world as an input, 
 	# and output Q values of the actions available to the agent as the output. 
 
-	def __init__(self, environment_name):
+	def __init__(self, environment_name, learning_rate):
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
-		pass
+		self.action_size = environment_name.action_space.n
+		self.state_size = environment_name.observation_space.shape[0]
+                self.learning_rate = learning_rate
+		self.model = load_model()
+
+		
+		
+		
 
 	def save_model_weights(self, suffix):
-		# Helper function to save your model / weights. 
-		pass
+		self.model.save_weights(suffix)
 
-	def load_model(self, model_file):
+	def load_model(self):
 		# Helper function to load an existing model.
-		pass
+		model = Sequential()
+		model.add(Dense(48, input_dim=self.state_size, activation='linear'))
+		model.add(Dense(48,activation='linear'))
+		model.add(Dense(self.action_size,activation='linear'))
+		model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+		return model
+		
 
 	def load_model_weights(self,weight_file):
-		# Helper funciton to load model weights. 
-		pass
+		self.model.load_weights(weight_file)
 
 class Replay_Memory():
 
 	def __init__(self, memory_size=50000, burn_in=10000):
+         self.memory = deque(maxlen = memory_size)
+		 self.epsilon_min = 0.01
+		 self.epsilon_decay = 0.99
+		 self.epsilon = 1
+		 for state, action, reward, next_state, done in sample_batch(self)
+		 target_Q = reward
+		 if not done:
+		 target_Q = (reward + self.gamma*np.amax(self.model.predict(next_state)[0]))
+		 target_function = self.model.predict(state)
+		 target_function[0][action] = target_Q
+		 self.model.fit(state, target_function, epochs = 1000, verbose=0)
+		 if self.epsilon > self.epsilon_min:
+		 self.epsilon *= self.epsilon_decay
+		 
 
-		# The memory essentially stores transitions recorder from the agent
-		# taking actions in the environment.
-
-		# Burn in episodes define the number of episodes that are written into the memory from the 
-		# randomly initialized agent. Memory size is the maximum size after which old elements in the memory are replaced. 
-		# A simple (if not the most efficient) was to implement the memory is as a list of transitions. 
-		pass
 
 	def sample_batch(self, batch_size=32):
-		# This function returns a batch of randomly sampled transitions - i.e. state, action, reward, next state, terminal flag tuples. 
-		# You will feed this to your model to train.
-		pass
+	    minibatch = random.sample(self.memory, batch_size)
+		return minibatch
 
 	def append(self, transition):
-		# Appends transition to the memory. 	
-		pass
+		self.memory.append((state, action, reward, next_state, done))
 
 class DQN_Agent():
 
