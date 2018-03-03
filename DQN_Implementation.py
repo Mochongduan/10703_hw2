@@ -19,10 +19,6 @@ class QNetwork():
                 self.learning_rate = learning_rate
 		self.model = load_model()
 
-		
-		
-		
-
 	def save_model_weights(self, suffix):
 		self.model.save_weights(suffix)
 
