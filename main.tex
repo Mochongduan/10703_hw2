@@ -195,6 +195,50 @@ Update~\ref{eq:tab_qlearn} defines the TD update when the representation of the 
 
 \noindent
 \begin{solution}
+The feature function we select ($|S|=n,|A|=m$)is \\
+
+
+$$
+\hat{\phi(s,a)}=
+\begin{pmatrix} 
+\mathbbm{1}_{s=s_{1},a=a_{1}}  & ...& \mathbbm{1}_{s=s_{1},a=a_{m}}  \\
+...&...&...\\
+ \mathbbm{1}_{s=s_{n},a=a_{1}} & ... &\mathbbm{1}_{s=s_{1},a=a_{m}}
+\end{pmatrix}
+$$
+And then we reshape $\hat{\phi}$ to an array as $1\times (mn)$, then we get our feature function as $\phi(s,a)$\\
+Besides, we have $$Q_{w}(s,a)=w^{T}\phi(s,a)$$
+To prove, we have for TD update 2,
+\begin{align}
+	w := w + 
+		\alpha \left( 
+			r + \gamma \max _{a' \in A} Q _w(s', a') 
+				- Q _w(s, a) 
+		\right) \nabla _w 
+			Q _w (s, a) .
+	\label{eq:fapp_qlearn}
+\end{align}
+Multiply $\phi(s,a)$ for both sides,  we have
+\begin{align}
+	w ^T \phi(s,a):= w ^T \phi(s,a) + 
+		\alpha \left( 
+			r + \gamma \max _{a' \in A} Q _w(s', a') 
+				- Q _w(s, a) 
+		\right) \nabla _w 
+			Q _w (s, a)^T  \phi(s,a).
+	\label{eq:fapp_qlearn}
+\end{align}
+And we know that $\nabla _w 
+			Q _w (s, a)= \phi(s,a)$, thus we get
+\begin{align}
+	Q_{w}(s,a):= Q_{w}(s,a) + 
+		\alpha \left( 
+			r + \gamma \max _{a' \in A} Q _w(s', a') 
+				- Q _w(s, a) 
+		\right) 
+	\label{eq:fapp_qlearn}
+\end{align}
+And it is equivalent to update 1, since $Q_{w}(s,a)$ is an exact tabular representation for $Q(s,a)$.
 \end{solution}
 
 \subsection*{Question 2.b \textbf{[5pts]}}
