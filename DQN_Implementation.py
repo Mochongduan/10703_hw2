@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import numpy as npy
+import numpy as np
 import gym
 import sys, copy, argparse
 from collections import deque
@@ -16,25 +16,22 @@ class QNetwork():
     # The network should take in state of the world as an input,
     # and output Q values of the actions available to the agent as the output.
 
-    def __init__(self, environment_name, learning_rate):
+    def __init__(self, num_features, num_actions):
         # Define your network architecture here. It is also a good idea to define any training operations
         # and optimizers here, initialize your variables, or alternately compile your model here.
-        self.action_size = environment_name.action_space.n
-        self.state_size = environment_name.observation_space.shape[0]
-        self.learning_rate = learning_rate
-        self.model = load_model()
+        self.model = Sequential()
+        self.model.add(Dense(48, input_shape=(num_features,)))
+        self.model.add(Dense(48))
+        self.model.add(Dense(num_actions))
+        self.model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
 
-    def save_model_weights(self, suffix):
-        self.model.save_weights(suffix)
+    def save_model_weights(self, weight_file):
+        self.model.save_weights(weight_file)
 
-    def load_model(self):
+    def load_model(self, model_name):
         # Helper function to load an existing model.
-        model = Sequential()
-        model.add(Dense(48, input_dim=self.state_size, activation='linear'))
-        model.add(Dense(48, activation='linear'))
-        model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
-        return model
+        self.model = keras.models.load_model(model_name)
+        return self.model
 
     def load_model_weights(self, weight_file):
         self.model.load_weights(weight_file)
@@ -78,12 +75,18 @@ class DQN_Agent():
     # (4) Create a function to test the Q Network's performance on the environment.
     # (5) Create a function for Experience Replay.
 
-    def __init__(self, environment_name, render=False):
+    def __init__(self, environment_name, render=False, iterations=1000, episodes=1000):
         # Create an instance of the network itself, as well as the memory.
         # Here is also a good place to set environmental parameters,
         # as well as training parameters - number of episodes / iterations, etc.
+        self.env = gym.make(environment_name)
+        self.num_actions = len(self.env.action_space)
+        self.num_features = len(self.env.observation_space)
+        self.qnet = QNetwork(self.num_features, self.num_actions)
 
-        pass
+        self.iterations = iterations
+        self.episodes = episodes
+        self.eps = .9
 
     def epsilon_greedy_policy(self, q_values):
         # Creating epsilon greedy probabilities to sample from.
@@ -91,7 +94,7 @@ class DQN_Agent():
 
     def greedy_policy(self, q_values):
         # Creating greedy policy for test time.
-        pass
+        return np.argmax(q_values, axis=1)
 
     def train(self):
         # In this function, we will train our network.
@@ -100,16 +103,21 @@ class DQN_Agent():
 
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
-        pass
+        for episodes in range(self.episodes):
+            reward = 0
+            done = False
+            observation = self.env.reset()
+            for i in range(self.iterations):
+
+
 
     def test(self, model_file=None):
-
+        pass
     # Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
     # Here you need to interact with the environment, irrespective of whether you are using a memory.
 
     def burn_in_memory():
         # Initialize your replay memory with a burn_in number of episodes / transitions.
-
         pass
 
 
