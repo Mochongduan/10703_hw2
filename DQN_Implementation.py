@@ -16,14 +16,15 @@ class QNetwork():
     # The network should take in state of the world as an input,
     # and output Q values of the actions available to the agent as the output.
 
-    def __init__(self, num_features, num_actions):
+    def __init__(self, feature_shape, num_actions):
         # Define your network architecture here. It is also a good idea to define any training operations
         # and optimizers here, initialize your variables, or alternately compile your model here.
         self.model = Sequential()
-        self.model.add(Dense(48, input_shape=(num_features,)))
+        self.model.add(Dense(48, input_shape=feature_shape))
         self.model.add(Dense(48))
         self.model.add(Dense(num_actions))
         self.model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
+        self.model.summary()
 
     def save_model_weights(self, weight_file):
         self.model.save_weights(weight_file)
@@ -75,32 +76,45 @@ class DQN_Agent():
     # (4) Create a function to test the Q Network's performance on the environment.
     # (5) Create a function for Experience Replay.
 
-    def __init__(self, environment_name, render=False, gamma=.9, max_iteration=1000, max_episode=1000, eps=.9):
+    def __init__(self, environment_name, render=False, gamma=.9, max_iteration=1000, max_episode=4000, eps=.5):
         # Create an instance of the network itself, as well as the memory.
         # Here is also a good place to set environmental parameters,
         # as well as training parameters - number of episodes / iterations, etc.
         self.env = gym.make(environment_name)
-        self.num_actions = len(self.env.action_space)
-        self.num_features = len(self.env.observation_space)
-        self.qnet = QNetwork(self.num_features, self.num_actions)
+        self.num_actions = self.env.action_space.n
+        self.feature_shape = self.env.observation_space.shape
+        self.qnet = QNetwork(self.feature_shape, self.num_actions)
 
         self.max_iteration = max_iteration
         self.max_episode = max_episode
         self.gamma = gamma
         self.eps = eps
 
-    def epsilon_greedy_policy(self, q_values):
+    # policy will return (a, q)
+    def epsilon_greedy_policy(self, q_values, eps):
         # Creating epsilon greedy probabilities to sample from.
-        # TODO: finish the greedy policy
-        return np.argmax(q_values, axis=1)
+        # TODO: check eps-greedy policy
+        # idea: first use 1-eps probability to choose the max Q
+        # if max is not chosen, uniformly choose action across all available actions
+        # which is equal to conditional probability: eps * 1/nA.
+        # Then for the max, its probability is (1-eps) + 1/nA
+        if np.random.uniform() < 1 - eps:
+            a = q_values.argmax()
+            return a, q_values[a]
+        else:
+            a = np.random.randint(0, self.num_actions)
+            return a, q_values[a]
+
+
 
     def greedy_policy(self, q_values):
         # Creating greedy policy for test time.
-        return np.argmax(q_values, axis=1)
+        a = q_values.argmax()
+        return a, q_values[a]
 
 
     # policy: callable, which take in q_values and generate actions based on q_values
-    def train(self, ):
+    def train(self):
         # In this function, we will train our network.
         # If training without experience replay_memory, then you will interact with the environment
         # in this function, while also updating your network parameters.
@@ -108,35 +122,44 @@ class DQN_Agent():
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
         model = self.qnet.model
-        for episodes in range(self.max_episode):
+
+        for episode in range(self.max_episode):
+
+            # TODO: need a eps-scheduler here. replace following line by eps = some_schedular(episode/time)
+            # eps will descent based on the time/episode that already passed
+            eps = self.eps
 
             # reset the environment
             done = False
-            curr_state = self.env.reset()[None,:]
+            curr_state = self.env.reset()
 
             for i in range(self.max_iteration):
                 if done:
+                    print('---One episode ends!!---')
                     break
 
+                curr_state = curr_state[None,:]
+
                 # calculate current estimated q(s, a) and choose the greedy action
-                q_curr_estimate = model.predict(curr_state)
+                q_curr_estimate = model.predict(curr_state).flatten()
 
                 # this is the action a
-                curr_action = self.epsilon_greedy_policy(q_curr_estimate)
+                curr_action, _ = self.epsilon_greedy_policy(q_curr_estimate, eps)
 
                 # take the action to the new state
                 # next_state: s', reward: r
                 next_state, reward, done, _ = self.env.step(curr_action)
 
                 # this is q(s', a')
-                q_next_estimate = model.predict(next_state)
+                q_next_estimate = model.predict(next_state[None,:]).flatten()
 
                 # TODO: epsilon-greedy or greedy?
-                next_action = self.epsilon_greedy_policy(q_next_estimate)
+                _, q_next = self.epsilon_greedy_policy(q_next_estimate, eps)
 
                 # r + gamma * max(q(s', a'))
-                q_curr_target = reward + self.gamma * q_next_estimate[next_action]
+                q_curr_target = reward + self.gamma * q_next
 
+                q_curr_target =  keras.utils.to_categorical([[q_curr_target]], self.num_actions)
                 # train it
                 model.fit(curr_state, q_curr_target)
 
@@ -150,7 +173,7 @@ class DQN_Agent():
     # Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
     # Here you need to interact with the environment, irrespective of whether you are using a memory.
 
-    def burn_in_memory():
+    def burn_in_memory(self):
         # Initialize your replay memory with a burn_in number of episodes / transitions.
         pass
 
@@ -160,11 +183,11 @@ def parse_arguments():
     parser.add_argument('--env', dest='env', type=str)
     parser.add_argument('--render', dest='render', type=int, default=0)
     parser.add_argument('--train', dest='train', type=int, default=1)
-    parser.add_argument('--model', dest='model_file', type=str)
+    parser.add_argument('--model', dest='model_file', type=str, default='')
     return parser.parse_args()
 
 
-def main(args):
+def main():
     args = parse_arguments()
     environment_name = args.env
 
@@ -176,8 +199,11 @@ def main(args):
     # Setting this as the default tensorflow session.
     keras.backend.tensorflow_backend.set_session(sess)
 
+    agent = DQN_Agent(environment_name, gamma=1.)
+    agent.train()
+
 
 # You want to create an instance of the DQN_Agent class here, and then train / test it.
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
