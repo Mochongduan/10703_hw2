@@ -37,31 +37,31 @@ class QNetwork():
         self.model.load_weights(weight_file)
 
 
-class Replay_Memory():
-
-    def __init__(self, memory_size=50000, burn_in=10000):
-        self.memory = deque(maxlen=memory_size)
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.99
-        self.epsilon = 1
-        for state, action, reward, next_state, done in sample_batch(self)
-            target_Q = reward
-        if not done:
-            target_Q = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-        target_function = self.model.predict(state)
-        target_function[0][action] = target_Q
-        self.model.fit(state, target_function, epochs=1000, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-
-
-def sample_batch(self, batch_size=32):
-    minibatch = random.sample(self.memory, batch_size)
-    return minibatch
-
-
-def append(self, transition):
-    self.memory.append((state, action, reward, next_state, done))
+# class Replay_Memory():
+#
+#     def __init__(self, memory_size=50000, burn_in=10000):
+#         self.memory = deque(maxlen=memory_size)
+#         self.epsilon_min = 0.01
+#         self.epsilon_decay = 0.99
+#         self.epsilon = 1
+#         for state, action, reward, next_state, done in sample_batch(self)
+#             target_Q = reward
+#         if not done:
+#             target_Q = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
+#         target_function = self.model.predict(state)
+#         target_function[0][action] = target_Q
+#         self.model.fit(state, target_function, epochs=1000, verbose=0)
+#         if self.epsilon > self.epsilon_min:
+#             self.epsilon *= self.epsilon_decay
+#
+#
+#     def sample_batch(self, batch_size=32):
+#         minibatch = random.sample(self.memory, batch_size)
+#         return minibatch
+#
+#
+#     def append(self, transition):
+#         self.memory.append((state, action, reward, next_state, done))
 
 
 class DQN_Agent():
@@ -100,7 +100,7 @@ class DQN_Agent():
 
 
     # policy: callable, which take in q_values and generate actions based on q_values
-    def train(self, policy):
+    def train(self, ):
         # In this function, we will train our network.
         # If training without experience replay_memory, then you will interact with the environment
         # in this function, while also updating your network parameters.
@@ -112,20 +112,17 @@ class DQN_Agent():
 
             # reset the environment
             done = False
-            curr_state = self.env.reset()
+            curr_state = self.env.reset()[None,:]
 
             for i in range(self.max_iteration):
                 if done:
                     break
-                # change to 2-D if it is a single example
-                if len(curr_state.shape) == 1:
-                    curr_state =curr_state[None,:]
 
                 # calculate current estimated q(s, a) and choose the greedy action
                 q_curr_estimate = model.predict(curr_state)
 
                 # this is the action a
-                curr_action = policy(q_curr_estimate)
+                curr_action = self.epsilon_greedy_policy(q_curr_estimate)
 
                 # take the action to the new state
                 # next_state: s', reward: r
@@ -134,8 +131,11 @@ class DQN_Agent():
                 # this is q(s', a')
                 q_next_estimate = model.predict(next_state)
 
+                # TODO: epsilon-greedy or greedy?
+                next_action = self.epsilon_greedy_policy(q_next_estimate)
+
                 # r + gamma * max(q(s', a'))
-                q_curr_target = reward + self.gamma * policy(q_next_estimate)
+                q_curr_target = reward + self.gamma * q_next_estimate[next_action]
 
                 # train it
                 model.fit(curr_state, q_curr_target)
