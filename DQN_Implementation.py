@@ -75,7 +75,7 @@ class DQN_Agent():
     # (4) Create a function to test the Q Network's performance on the environment.
     # (5) Create a function for Experience Replay.
 
-    def __init__(self, environment_name, render=False, iterations=1000, episodes=1000):
+    def __init__(self, environment_name, render=False, gamma=.9, max_iteration=1000, max_episode=1000, eps=.9):
         # Create an instance of the network itself, as well as the memory.
         # Here is also a good place to set environmental parameters,
         # as well as training parameters - number of episodes / iterations, etc.
@@ -84,30 +84,64 @@ class DQN_Agent():
         self.num_features = len(self.env.observation_space)
         self.qnet = QNetwork(self.num_features, self.num_actions)
 
-        self.iterations = iterations
-        self.episodes = episodes
-        self.eps = .9
+        self.max_iteration = max_iteration
+        self.max_episode = max_episode
+        self.gamma = gamma
+        self.eps = eps
 
     def epsilon_greedy_policy(self, q_values):
         # Creating epsilon greedy probabilities to sample from.
-        pass
+        # TODO: finish the greedy policy
+        return np.argmax(q_values, axis=1)
 
     def greedy_policy(self, q_values):
         # Creating greedy policy for test time.
         return np.argmax(q_values, axis=1)
 
-    def train(self):
+
+    # policy: callable, which take in q_values and generate actions based on q_values
+    def train(self, policy):
         # In this function, we will train our network.
         # If training without experience replay_memory, then you will interact with the environment
         # in this function, while also updating your network parameters.
 
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
-        for episodes in range(self.episodes):
-            reward = 0
+        model = self.qnet.model
+        for episodes in range(self.max_episode):
+
+            # reset the environment
             done = False
-            observation = self.env.reset()
-            for i in range(self.iterations):
+            curr_state = self.env.reset()
+
+            for i in range(self.max_iteration):
+                if done:
+                    break
+                # change to 2-D if it is a single example
+                if len(curr_state.shape) == 1:
+                    curr_state =curr_state[None,:]
+
+                # calculate current estimated q(s, a) and choose the greedy action
+                q_curr_estimate = model.predict(curr_state)
+
+                # this is the action a
+                curr_action = policy(q_curr_estimate)
+
+                # take the action to the new state
+                # next_state: s', reward: r
+                next_state, reward, done, _ = self.env.step(curr_action)
+
+                # this is q(s', a')
+                q_next_estimate = model.predict(next_state)
+
+                # r + gamma * max(q(s', a'))
+                q_curr_target = reward + self.gamma * policy(q_next_estimate)
+
+                # train it
+                model.fit(curr_state, q_curr_target)
+
+                # move to the next state
+                curr_state = next_state
 
 
 
