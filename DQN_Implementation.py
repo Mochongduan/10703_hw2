@@ -5,9 +5,11 @@ import sys, copy, argparse
 from collections import deque
 import keras
 from keras.models import Sequential
+from keras.models import load_model
 from keras.layers import Dense
 from keras.optimizers import Adam
 import tensorflow as tf
+
 
 
 class QNetwork():
@@ -174,12 +176,47 @@ class DQN_Agent():
                 # move to the next state
                 curr_state = next_state
             print('-----Episode done!!-----')
+        model.save("/Users/cartpole_dqn.h5")
+
+
 
 
     def test(self, model_file=None):
-        pass
     # Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
     # Here you need to interact with the environment, irrespective of whether you are using a memory.
+        model = load_model("/Users/cartpole_dqn.h5")
+        Test = 100
+
+        for episode in range(self.max_episode):
+
+            # TODO: need a eps-scheduler here. replace following line by eps = some_schedular(episode/time)
+            # eps will descent based on the time/episode that already passed
+            
+
+            # reset the environment
+            done = False
+            
+            if episode % 100 == 0:
+                    total_reward = 0
+                    for j in range(Test):
+                        curr_state = self.env.reset()
+                        for i in range(self.max_iteration):
+                            curr_state = curr_state[None,:]
+                            # calculate current estimated q(s, a) and choose the greedy actio
+                            q_curr_estimate = model.predict(curr_state).flatten()
+                            # this is the action a
+                            curr_action, _ = self.greedy_policy(q_curr_estimate)
+                            # take the action to the new state
+                            # next_state: s', reward: r
+                            next_state, reward, done, _ = self.env.step(curr_action)
+                            total_reward+=reward
+                            if done:
+                                    break
+                    average_reward = total_reward/Test
+                    #print ('episode: ',episode,'Evaluation Average Reward:',average_reward)
+                    if average_reward >= 200:
+                            break
+
 
     def burn_in_memory(self):
         # Initialize your replay memory with a burn_in number of episodes / transitions.
