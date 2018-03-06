@@ -200,7 +200,7 @@ class DQN_Agent():
                     total_reward = 0
                     for j in range(Test):
                         curr_state = self.env.reset()
-                        for i in range(self.max_iteration):
+                        for i in range(500):
                             curr_state = curr_state[None,:]
                             # calculate current estimated q(s, a) and choose the greedy actio
                             q_curr_estimate = model.predict(curr_state).flatten()
