@@ -109,7 +109,7 @@ class DQN_Agent():
 
         if np.random.uniform() < eps:
             a = self.env.action_space.sample()
-            return a, q_values[a]
+            return a, q_values[0][a]
         else:
             return self.greedy_policy(q_values)
 
@@ -165,7 +165,7 @@ class DQN_Agent():
 
                 # r + gamma * max(q(s', a'))
                 q_curr_target = q_curr_estimate
-                q_curr_target[curr_action] = reward + self.gamma * q_next
+                q_curr_target[0][curr_action] = reward + self.gamma * q_next
 
                 # q_curr_target = keras.utils.to_categorical([[q_curr_target]], self.num_actions)
                 # train it
@@ -173,7 +173,7 @@ class DQN_Agent():
 
                 # move to the next state
                 curr_state = next_state
-
+            print('-----Episode done!!-----')
 
 
     def test(self, model_file=None):
