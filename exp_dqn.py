@@ -149,9 +149,6 @@ class DQN_Agent():
         total_reward = 0
         all_reward = []
         for i_episode in range(self.max_episode):
-            # exceed the maximum iteration limit
-            if total_iteration > self.max_iteration:
-                break
 
             # reset the environment
             done = False
@@ -185,7 +182,7 @@ class DQN_Agent():
                   .format(i_episode, curr_iteration, curr_reward, avg40, total_reward/len(all_reward)))
             if i_episode % 500 == 0:
                 model.save("./model/{}-e{}-avg40-{:.4f}.h5".format(self.envname, i_episode, avg40))
-
+        model.save("./model/{}-e{}-avg40-{:.4f}.h5".format(self.envname, self.max_episode, sum(all_reward[-40:]) / min(40, len(all_reward))))
 
     def test(self, model_file=None):
     # Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
