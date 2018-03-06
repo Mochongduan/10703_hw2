@@ -126,9 +126,6 @@ class DQN_Agent():
         return min(i_iteration, self.max_iteration) * (self.min_eps - self.max_eps) / self.max_iteration + self.max_eps
 
 
-    def proceed(self, curr_state, action):
-        pass
-
     # policy: callable, which take in q_values and generate actions based on q_values
     def train(self):
         # In this function, we will train our network.
@@ -138,7 +135,7 @@ class DQN_Agent():
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
         model = self.qnet.model
-        # tensorboard = keras.callbacks.TensorBoard(log_dir='./log', histogram_freq=0, write_grads=False, write_images=False)
+        tensorboard = keras.callbacks.TensorBoard(log_dir='./log', histogram_freq=0, write_grads=False, write_images=False)
         total_iteration = 0
 
         for i_episode in range(self.max_episode):
@@ -170,24 +167,26 @@ class DQN_Agent():
                 # next_state: s', reward: r
                 next_state, reward, done, _ = self.env.step(curr_action)
 
-                # this is q(s', a')
-                q_next_estimate = model.predict(next_state[None,:])
+                if done:
+                    q_next = 0
+                else:
+                    # this is q(s', a')
+                    q_next_estimate = model.predict(next_state[None,:])
 
-                # TODO: epsilon-greedy or greedy?
-                _, q_next = self.greedy_policy(q_next_estimate)
+                    # TODO: epsilon-greedy or greedy?
+                    _, q_next = self.greedy_policy(q_next_estimate)
 
                 # r + gamma * max(q(s', a'))
                 q_curr_target[0][curr_action] = reward + self.gamma * q_next
 
                 # q_curr_target = keras.utils.to_categorical([[q_curr_target]], self.num_actions)
                 # train it
-                print('estimate:{}, target: {}'.format(model.predict(curr_state), q_curr_target))
-                model.fit(curr_state, q_curr_target)
-                # model.fit(curr_state, q_curr_target, verbose=0, callbacks=[tensorboard])
+                # model.fit(curr_state, q_curr_target, verbose=0)
+                model.fit(curr_state, q_curr_target, verbose=0, callbacks=[tensorboard])
 
                 # move to the next state
                 curr_state = next_state
-            print('-----Episode {} done with {} steps!!-----'.format(i_episode, curr_iteration))
+            print('-----Episode {} done with {} steps!-----'.format(i_episode, curr_iteration))
             total_iteration += curr_iteration
         model.save("./model/cartpole_dqn.h5")
 
