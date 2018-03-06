@@ -214,7 +214,7 @@ class DQN_Agent():
                                     break
                     average_reward = total_reward/Test
                     #print ('episode: ',episode,'Evaluation Average Reward:',average_reward)
-                    if average_reward >= 200:
+                    if average_reward >= 300:
                             break
 
 
