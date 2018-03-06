@@ -208,7 +208,7 @@ class DQN_Agent():
                             curr_action, _ = self.greedy_policy(q_curr_estimate)
                             # take the action to the new state
                             # next_state: s', reward: r
-                            next_state, reward, done, _ = self.env.step(curr_action)
+                            curr_state, reward, done, _ = self.env.step(curr_action)
                             total_reward+=reward
                             if done:
                                     break
