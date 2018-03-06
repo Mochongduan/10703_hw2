@@ -24,7 +24,6 @@ class QNetwork():
         self.model.add(Dense(48))
         self.model.add(Dense(num_actions))
         self.model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
-        self.model.summary()
 
     def save_model_weights(self, weight_file):
         self.model.save_weights(weight_file)
@@ -76,7 +75,7 @@ class DQN_Agent():
     # (4) Create a function to test the Q Network's performance on the environment.
     # (5) Create a function for Experience Replay.
 
-    def __init__(self, environment_name, render=False, gamma=.9, max_iteration=1000, max_episode=4000, eps=.5):
+    def __init__(self, environment_name, render=False, gamma=.9, max_iteration=1000, max_episode=4000, eps=.5, mem_size=50000, batch_size=32):
         # Create an instance of the network itself, as well as the memory.
         # Here is also a good place to set environmental parameters,
         # as well as training parameters - number of episodes / iterations, etc.
@@ -89,6 +88,15 @@ class DQN_Agent():
         self.max_episode = max_episode
         self.gamma = gamma
         self.eps = eps
+        self.mem_size = mem_size
+        self.batch_size = batch_size
+
+        # replace default with the recommended parameters........
+        if environment_name == 'MountainCar-v0':
+            self.max_episode = 5000
+        elif environment_name == 'CartPole-v0':
+            self.max_episode = 1000000
+
 
     # policy will return (a, q)
     def epsilon_greedy_policy(self, q_values, eps):
@@ -98,19 +106,18 @@ class DQN_Agent():
         # if max is not chosen, uniformly choose action across all available actions
         # which is equal to conditional probability: eps * 1/nA.
         # Then for the max, its probability is (1-eps) + 1/nA
-        if np.random.uniform() < 1 - eps:
-            a = q_values.argmax()
+
+        if np.random.uniform() < eps:
+            a = self.env.action_space.sample()
             return a, q_values[a]
         else:
-            a = np.random.randint(0, self.num_actions)
-            return a, q_values[a]
-
+            return self.greedy_policy(q_values)
 
 
     def greedy_policy(self, q_values):
         # Creating greedy policy for test time.
-        a = q_values.argmax()
-        return a, q_values[a]
+        a = q_values[0].argmax()
+        return a, q_values[0][a]
 
 
     # policy: callable, which take in q_values and generate actions based on q_values
@@ -122,7 +129,7 @@ class DQN_Agent():
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
         model = self.qnet.model
-
+        tensorboard = keras.callbacks.TensorBoard(log_dir='./log', histogram_freq=0)
         for episode in range(self.max_episode):
 
             # TODO: need a eps-scheduler here. replace following line by eps = some_schedular(episode/time)
@@ -133,15 +140,15 @@ class DQN_Agent():
             done = False
             curr_state = self.env.reset()
 
-            for i in range(self.max_iteration):
-                if done:
-                    print('---One episode ends!!---')
-                    break
+            # gym takes care of max_episode_steps.
+            # if one episode reaches max steps, it will be automatically marked as 'done'
+            while not done:
 
+                # TODO: currently using batch_size = 1, change to mini-batch for better performance
                 curr_state = curr_state[None,:]
 
                 # calculate current estimated q(s, a) and choose the greedy action
-                q_curr_estimate = model.predict(curr_state).flatten()
+                q_curr_estimate = model.predict(curr_state)
 
                 # this is the action a
                 curr_action, _ = self.epsilon_greedy_policy(q_curr_estimate, eps)
@@ -151,17 +158,18 @@ class DQN_Agent():
                 next_state, reward, done, _ = self.env.step(curr_action)
 
                 # this is q(s', a')
-                q_next_estimate = model.predict(next_state[None,:]).flatten()
+                q_next_estimate = model.predict(next_state[None,:])
 
                 # TODO: epsilon-greedy or greedy?
                 _, q_next = self.epsilon_greedy_policy(q_next_estimate, eps)
 
                 # r + gamma * max(q(s', a'))
-                q_curr_target = reward + self.gamma * q_next
+                q_curr_target = q_curr_estimate
+                q_curr_target[curr_action] = reward + self.gamma * q_next
 
-                q_curr_target =  keras.utils.to_categorical([[q_curr_target]], self.num_actions)
+                # q_curr_target = keras.utils.to_categorical([[q_curr_target]], self.num_actions)
                 # train it
-                model.fit(curr_state, q_curr_target)
+                model.fit(curr_state, q_curr_target, verbose=0, callbacks=[tensorboard])
 
                 # move to the next state
                 curr_state = next_state
@@ -198,7 +206,6 @@ def main():
 
     # Setting this as the default tensorflow session.
     keras.backend.tensorflow_backend.set_session(sess)
-
     agent = DQN_Agent(environment_name, gamma=1.)
     agent.train()
 
