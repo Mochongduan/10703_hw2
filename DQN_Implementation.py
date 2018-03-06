@@ -22,7 +22,7 @@ class QNetwork():
         # and optimizers here, initialize your variables, or alternately compile your model here.
         self.model = Sequential()
         self.model.add(Dense(48, input_shape=feature_shape))
-        self.model.add(Dense(48))
+        self.model.add(Dense(96))
         self.model.add(Dense(num_actions))
         self.model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
 
@@ -77,8 +77,9 @@ class DQN_Agent():
     # (5) Create a function for Experience Replay.
 
     def __init__(self, environment_name, render=False, gamma=.99,
-                 max_iteration=1000, max_episode=4000,
-                 max_eps=.5, min_eps=.05, mem_size=50000, batch_size=32):
+                 max_iteration=100000, max_episode=5000,
+                 max_eps=.3, min_eps=.05,
+                 mem_size=50000, batch_size=32):
         # Create an instance of the network itself, as well as the memory.
         # Here is also a good place to set environmental parameters,
         # as well as training parameters - number of episodes / iterations, etc.
@@ -121,9 +122,12 @@ class DQN_Agent():
         return a, q_values[0][a]
 
 
-    def eps_decay(self, i_episode):
-        return i_episode * (self.min_eps - self.max_eps) / self.max_episode + self.max_eps
+    def eps_decay(self, i_iteration):
+        return min(i_iteration, self.max_iteration) * (self.min_eps - self.max_eps) / self.max_iteration + self.max_eps
 
+
+    def proceed(self, curr_state, action):
+        pass
 
     # policy: callable, which take in q_values and generate actions based on q_values
     def train(self):
@@ -134,20 +138,24 @@ class DQN_Agent():
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
         model = self.qnet.model
-        tensorboard = keras.callbacks.TensorBoard(log_dir='./log', histogram_freq=0, write_grads=False, write_images=False)
-        for i_episode in range(self.max_episode):
+        # tensorboard = keras.callbacks.TensorBoard(log_dir='./log', histogram_freq=0, write_grads=False, write_images=False)
+        total_iteration = 0
 
-            # TODO: need a eps-scheduler here. replace following line by eps = some_schedular(episode/time)
-            # eps will descent based on the time/episode that already passed
-            eps = self.eps_decay(i_episode)
+        for i_episode in range(self.max_episode):
+            # exceed the maximum iteration limit
+            if total_iteration > self.max_iteration:
+                break
 
             # reset the environment
             done = False
             curr_state = self.env.reset()
+            curr_iteration = 0
 
-            # gym takes care of max_episode_steps.
+            # TODO: gym takes care of max_episode_steps??？
             # if one episode reaches max steps, it will be automatically marked as 'done'
             while not done:
+                curr_iteration += 1
+                eps = self.eps_decay(curr_iteration + total_iteration)
 
                 # TODO: currently using batch_size = 1, change to mini-batch later
                 curr_state = curr_state[None,:]
@@ -173,11 +181,14 @@ class DQN_Agent():
 
                 # q_curr_target = keras.utils.to_categorical([[q_curr_target]], self.num_actions)
                 # train it
-                model.fit(curr_state, q_curr_target, verbose=0, callbacks=[tensorboard])
+                print('estimate:{}, target: {}'.format(model.predict(curr_state), q_curr_target))
+                model.fit(curr_state, q_curr_target)
+                # model.fit(curr_state, q_curr_target, verbose=0, callbacks=[tensorboard])
 
                 # move to the next state
                 curr_state = next_state
-            print('-----Episode {} done!!-----'.format(i_episode))
+            print('-----Episode {} done with {} steps!!-----'.format(i_episode, curr_iteration))
+            total_iteration += curr_iteration
         model.save("./model/cartpole_dqn.h5")
 
 
