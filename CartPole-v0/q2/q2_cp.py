@@ -66,14 +66,7 @@ class DQN_Agent():
     def generate_model(self):
         model = Sequential()
 
-        model.add(Dense(48, input_shape=self.feature_shape))
-        model.add(Activation('relu'))
-
-        model.add(Dense(96))
-        model.add(Activation('relu'))
-
-        model.add(Dense(self.num_actions))
-        model.add(Activation('relu'))
+        model.add(Dense(self.num_actions, input_shape=self.feature_shape))
 
         model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
         return model
