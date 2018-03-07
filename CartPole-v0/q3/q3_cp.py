@@ -18,6 +18,8 @@ class Replay_Memory():
         self.memory = []
         self.pos = 0
 
+
+
     def sample_batch(self, batch_size=32):
         return random.sample(self.memory, batch_size)
 
