@@ -64,9 +64,7 @@ class DQN_Agent():
     def generate_model(self):
         model = Sequential()
         model.add(Dense(48, input_shape=self.feature_shape, activation='relu'))
-        model.add(BatchNormalization())
         model.add(Dense(96, activation='relu'))
-        model.add(BatchNormalization())
         # last layer should be linear not relu because we need both negative/positive values
         model.add(Dense(self.num_actions))
         model.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.mse)
@@ -129,6 +127,7 @@ class DQN_Agent():
 
         # If you are using a replay memory, you should interact with environment here, and store these
         # transitions to memory, while also updating your model.
+        print('training on {}'.format(self.env_name))
         self.burn_in_memory()
         model = self.model
 
